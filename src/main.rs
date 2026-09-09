@@ -9,7 +9,8 @@ use std::env;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::{Duration};
 
-use routes::user_routes::init;
+use routes::user_routes::init_user_routes;
+use routes::location_routes::init_location_routes;
 use models::user::User;
 use util::hashing::hash_pw;
 
@@ -35,7 +36,11 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(db_pool_data.clone())
-            .configure(init)
+            .service(
+                web::scope("/api")
+                .configure(init_user_routes)
+                .configure(init_location_routes)
+            )
     })
     .bind(format!("{}:{}", host, port))?
     .run()
