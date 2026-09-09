@@ -11,7 +11,7 @@ pub enum Role {
     ADMIN,
 }
 
-#[derive(Debug, Serialize, Deserialize, FromRow)]
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, FromRow)]
 pub struct User {
     pub id: Uuid,
     pub name: String,

@@ -59,14 +59,14 @@ impl RefreshJwt {
     }
 }
 
-struct AuthConfig {
-    jwt_secret: String,
-    access_token_ttl_minutes: i64,
-    refresh_token_ttl_days: i64,
+pub struct AuthConfig {
+    pub jwt_secret: String,
+    pub access_token_ttl_minutes: i64,
+    pub refresh_token_ttl_days: i64,
 }
 
 impl AuthConfig {
-    fn get_conf() -> Self {
+    pub fn get_conf() -> Self {
         Self {
             jwt_secret: env::var("JWT_SECRET").unwrap(),
             access_token_ttl_minutes: 60,
@@ -75,11 +75,12 @@ impl AuthConfig {
     }
 }
 
-struct TokenPair {
-    access_token: String,
-    refresh_token: String,
-    token_typ: String,
-    expires_in: u64,
+#[derive(Serialize, Deserialize)]
+pub struct TokenPair {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub token_typ: String,
+    pub expires_in: u64,
 }
 
 pub struct TokenService {

@@ -7,6 +7,7 @@ use std::env;
 use sqlx::postgres::PgPool;
 use actix_web::web;
 use uuid::Uuid;
+use crate::models::user::*;
 
 pub fn hash_pw(pw: String) -> String {
     let salt_str = env::var("INIT_PW_SALT").unwrap();
@@ -19,17 +20,19 @@ pub fn hash_pw(pw: String) -> String {
 
 }
 
-pub async fn verify_pw(pw: String, name: String, db_pool: web::Data<PgPool>) -> bool {
+pub async fn verify_pw(pw: String, name: String, db_pool: web::Data<PgPool>) -> Result<User, String> {
     let incoming_hash: String = hash_pw(pw);
 
-    let db_hash = match sqlx::query_scalar::<_, String>(
-        "SELECT password FROM users WHERE name = $1"
+    let db_user: User = match sqlx::query_as::<_, User>(
+        "SELECT * FROM users WHERE name = $1"
     )
     .bind(name)
     .fetch_one(db_pool.get_ref())
     .await {
-        Ok(hash) => hash,
-        Err(_) => return false,
+        Ok(user) => user,
+        Err(_) => return Err("User not found!".to_string()),
     };
-    incoming_hash == db_hash
+    if incoming_hash != db_user.password { return Err("passwords dont match!".to_string()); }
+
+    Ok(db_user)
 }

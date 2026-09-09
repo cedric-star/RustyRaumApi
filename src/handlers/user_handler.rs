@@ -4,6 +4,7 @@ use sqlx::postgres::PgPool;
 use serde::{Serialize, Deserialize};
 use crate::models::user::{User, Role, CreateUser};
 use crate::util::hashing::verify_pw;
+use crate::util::jwt_service::*;
 
 #[derive(Serialize, Deserialize)]
 pub struct LoginRequest {
@@ -33,10 +34,22 @@ pub async fn health_check() -> HttpResponse {
 pub async fn login(db_pool: web::Data<PgPool>, req: web::Json<LoginRequest>) -> HttpResponse {
     println!("Loggin in as: {}", req.name);
 
-    if !verify_pw(req.password.clone(), req.name.clone(), db_pool).await {
-        println!("passwart isnt correct!");
-        return HttpResponse::Forbidden().into();
-    }
+    let db_user = match verify_pw(req.password.clone(), req.name.clone(), db_pool).await {
+        Ok(user) => user,
+        Err(e) => {
+            println!("{e}");
+            return HttpResponse::Forbidden().json(e);
+        }
+    };
+
     println!("password correct!");
-    HttpResponse::Ok().into()
+
+    let auth_conf = AuthConfig::get_conf();
+    let token_service = TokenService::new(&auth_conf);
+    let token_pair = match token_service.generate_token_pair(db_user.id, db_user.role) {
+        Ok(pair) => pair,
+        Err(e) => return HttpResponse::Forbidden().json(e),
+    };
+
+    HttpResponse::Ok().json(token_pair)
 }
