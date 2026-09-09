@@ -1,0 +1,14 @@
+services:
+  raum-db:
+    build: ./container/.
+    container_name: raum-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PW}
+      TZ: Europe/Berlin
+    volumes:
+      - ./container/postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
