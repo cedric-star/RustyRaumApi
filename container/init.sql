@@ -9,10 +9,11 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS locations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(200) NOT NULL,
     description TEXT,
 
-    geo_data GEOMETRY -- komplexe darstellung: punkt, line, polygon, multi-polygon
+    geo_data GEOMETRY(GEOMETRY, 4326) NOT NULL -- komplexe darstellung: punkt, line, polygon, multi-polygon
 );
 
 ---- Testdaten
