@@ -1,4 +1,4 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{web, http::header, HttpResponse, HttpRequest};
 use uuid::Uuid;
 use sqlx::postgres::PgPool;
 use sqlx::QueryBuilder;
@@ -7,6 +7,8 @@ use serde_json::Value;
 use crate::models::location::{Location, CreateLocation};
 use crate::util::hashing::verify_pw;
 use crate::util::jwt_service::*;
+use crate::util::auth::get_jwt;
+use crate::models::user::Role;
 
 #[derive(Serialize, Deserialize)]
 pub struct InsertRequest {
@@ -32,8 +34,15 @@ pub struct PatchRequest {
     pub geo_data: Option<Value>,
 }
 
-pub async fn get_all_locations(db_pool: web::Data<PgPool>) -> HttpResponse {
-    let locations = sqlx::query_as::<_, Location>("SELECT id, title, description, ST_AsGeoJson(geo_data)::TEXT as geo_data FROM locations")
+pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpResponse {
+    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    let jwt: Jwt = match get_jwt(req, roles).await {
+        Ok(jwt) => jwt,
+        Err(res) => return res,
+    };
+    println!("token korekt");
+
+    let locations = sqlx::query_as::<_, Location>("SELECT id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations")
         .fetch_all(db_pool.as_ref())
         .await;
 
@@ -42,6 +51,21 @@ pub async fn get_all_locations(db_pool: web::Data<PgPool>) -> HttpResponse {
         Err(e) => {
             println!("db error: {e}");
             HttpResponse::InternalServerError().finish()
+        }
+    }
+}
+
+pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>) -> HttpResponse {
+    let locations = sqlx::query_as::<_, Location>("select id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations, where id = $1")
+        .bind(id.to_string())
+        .fetch_all(db_pool.as_ref())
+        .await;
+
+    match locations {
+        Ok(locations) => HttpResponse::Ok().json(locations),
+        Err(e) => {
+            println!("Error gel locations by user: {e}");
+            return HttpResponse::InternalServerError().finish();
         }
     }
 }
@@ -103,6 +127,7 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: web::Json<PatchRe
     match query.execute(db_pool.as_ref()).await {
         Ok(res) => {
             println!("updated: {} rows", res.rows_affected());
+            if res.rows_affected() == 0 { return HttpResponse::BadRequest().json(serde_json::json!({"success": false}))}
             return HttpResponse::Ok().json(serde_json::json!({"success": true}))
         },
         Err(e) => {

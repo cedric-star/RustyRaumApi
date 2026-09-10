@@ -1,4 +1,5 @@
-use actix_web::web;
+use actix_web::{web, get, HttpResponse, Responder};
+use serde_json::json;
 use crate::handlers::location_handler::*;
 
 pub fn init_location_routes(cfg: &mut web::ServiceConfig) {

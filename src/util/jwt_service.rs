@@ -4,6 +4,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
+use actix_web::HttpRequest;
 use dotenv::dotenv;
 use std::env;
 
@@ -12,8 +13,8 @@ use crate::models::user::Role;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Jwt {
     pub user: Uuid,
-    pub exp_time: i64,
-    pub start_time: i64,
+    pub exp: i64,
+    pub iat: i64,
     pub typ: String,
     pub role: Role,
 }
@@ -24,23 +25,23 @@ impl Jwt {
 
         Self {
             user: user,
-            exp_time: (now + expires_in).timestamp(),
-            start_time: now.timestamp(),
+            exp: (now + expires_in).timestamp(),
+            iat: now.timestamp(),
             typ: "access".to_string(),
             role: role,
         }
     }
 
     pub fn is_expired(&self) -> bool {
-        Utc::now().timestamp() > self.exp_time
+        Utc::now().timestamp() > self.exp
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RefreshJwt {
     pub user: Uuid,
-    pub exp_time: i64,
-    pub start_time: i64,
+    pub exp: i64,
+    pub iat: i64,
     pub typ: String,
     pub family: Uuid,
 }
@@ -51,8 +52,8 @@ impl RefreshJwt {
 
         Self {
             user: user,
-            exp_time: (now + expires_in).timestamp(),
-            start_time: now.timestamp(),
+            exp: (now + expires_in).timestamp(),
+            iat: now.timestamp(),
             typ: "refresh".to_string(),
             family: Uuid::new_v4(),
         }
