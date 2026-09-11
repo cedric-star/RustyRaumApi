@@ -35,14 +35,14 @@ pub struct PatchRequest {
 }
 
 pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpResponse {
-    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    let roles: Vec<Role> = vec![Role::ADMIN];
     let jwt: Jwt = match get_jwt(req, roles).await {
         Ok(jwt) => jwt,
         Err(res) => return res,
     };
     println!("token korekt");
 
-    let locations = sqlx::query_as::<_, Location>("SELECT id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations")
+    let locations = sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations")
         .fetch_all(db_pool.as_ref())
         .await;
 
@@ -55,36 +55,53 @@ pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> 
     }
 }
 
-pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>) -> HttpResponse {
-    let locations = sqlx::query_as::<_, Location>("select id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations, where id = $1")
-        .bind(id.to_string())
+pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>, req: HttpRequest) -> HttpResponse {
+    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    let jwt: Jwt = match get_jwt(req, roles).await {
+        Ok(jwt) => jwt,
+        Err(res) => return res,
+    };
+    let id = id.into_inner();
+    println!("vergleich uuids:\n{}\n{}\n", id.to_string(), jwt.user.to_string());
+    if id != jwt.user {
+        return HttpResponse::Forbidden().json(serde_json::json!({"success": false, "msg": "token dosnt match user"}));
+    }
+    let locations = sqlx::query_as::<_, Location>("select id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations where user_id = $1")
+        .bind(id)
         .fetch_all(db_pool.as_ref())
         .await;
 
     match locations {
         Ok(locations) => HttpResponse::Ok().json(locations),
         Err(e) => {
-            println!("Error gel locations by user: {e}");
+            println!("Error get locations by user: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     }
 }
 
-pub async fn insert_new_from_json(db_pool: web::Data<PgPool>, req: web::Json<InsertRequest>) -> HttpResponse {
+pub async fn insert_new_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Json<InsertRequest>) -> HttpResponse {
+    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    let jwt: Jwt = match get_jwt(req, roles).await {
+        Ok(jwt) => jwt,
+        Err(res) => return res,
+    };
+
     let res = sqlx::query(
         r#"
-        insert into locations (title, description, geo_data)
-        values ($1, $2, $3)
+        insert into locations (user_id, title, description, geo_data)
+        values ($1, $2, $3, $4)
         "#,
     )
-        .bind(req.title.clone())
-        .bind(req.description.clone())
-        .bind(req.geo_data.clone().to_string())
+        .bind(jwt.user)
+        .bind(body.title.clone())
+        .bind(body.description.clone())
+        .bind(body.geo_data.clone().to_string())
         .execute(db_pool.as_ref())
         .await;
 
     match res {
-        Ok(rows) => println!("Inserted new location: {}, accected rows: {}", req.title, rows.rows_affected()),
+        Ok(rows) => println!("Inserted new location: {}, accected rows: {}", body.title, rows.rows_affected()),
         Err(e) => {
             println!("Error inserting location: {e}");
             return HttpResponse::InternalServerError().finish();
@@ -94,22 +111,43 @@ pub async fn insert_new_from_json(db_pool: web::Data<PgPool>, req: web::Json<Ins
     HttpResponse::Ok().into()
 }
 
-pub async fn update_from_json(db_pool: web::Data<PgPool>, req: web::Json<PatchRequest>) -> HttpResponse {
-    println!("{}", req.id.to_string());
+pub async fn update_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Json<PatchRequest>) -> HttpResponse {
+    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    let jwt: Jwt = match get_jwt(req, roles).await {
+        Ok(jwt) => jwt,
+        Err(res) => return res,
+    };
+    //user dürfen nur eigene locations bearbeiten:
+    if jwt.role == Role::USER {
+        //user darg nur EIGENE location bearbeiten:
+        match get_location_by_id(jwt.user, db_pool.clone()).await {
+            Some(location) => {
+                match location.user_id {
+                    Some(user_id) => {
+                        if user_id != jwt.user { return HttpResponse::Forbidden().finish(); }
+                    }
+                    None => { return HttpResponse::Forbidden().finish(); }
+                }
+            }
+            None => {return HttpResponse::Forbidden().finish(); }
+        }
+    }
+
+    println!("{}", body.id.to_string());
     let mut query_builder = QueryBuilder::new("update locations set ");
     let mut first = true;
 
-    if let Some(title) = &req.title {
+    if let Some(title) = &body.title {
         if !first { query_builder.push(", "); }
         query_builder.push("title = ").push_bind(title);
         first = false;
     }
-    if let Some(description) = &req.description {
+    if let Some(description) = &body.description {
         if !first { query_builder.push(", "); }
         query_builder.push("description = ").push_bind(description);
         first = false;
     }
-    if let Some(geo_data) = &req.geo_data {
+    if let Some(geo_data) = &body.geo_data {
         if !first { query_builder.push(", "); }
         query_builder.push("geo_data = ST_GeomFromGeoJSON(").push_bind(geo_data).push(")");
         first = false;
@@ -120,7 +158,7 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: web::Json<PatchRe
             .json(serde_json::json!({"error": "No fields to update"}));
     }
 
-    query_builder.push(" WHERE id = ").push_bind(req.id);
+    query_builder.push(" WHERE id = ").push_bind(body.id);
     println!("{:?}", query_builder.sql());
     let query = query_builder.build();
 
@@ -131,13 +169,41 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: web::Json<PatchRe
             return HttpResponse::Ok().json(serde_json::json!({"success": true}))
         },
         Err(e) => {
-            println!("update failde: {e}");
+            println!("update failed: {e}");
             return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()}))
         }
     }
 }
 
 pub async fn delete_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>) -> HttpResponse {
-    println!("deleting: {}", id.to_string());
-    HttpResponse::Ok().into()
+    let res = sqlx::query(
+        "delete from locations where id = $1",
+    )
+        .bind(id.into_inner())
+        .execute(db_pool.as_ref())
+        .await;
+    match res {
+        Ok(res) => {
+            println!("deleted rows: {}", res.rows_affected());
+            return HttpResponse::Ok().finish();
+        },
+        Err(e) => {
+            println!("error while deleting: {e}");
+            return HttpResponse::InternalServerError().finish();
+        },
+
+    };
+}
+
+async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<Location> {
+    match sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations where id = $1")
+        .bind(id)
+        .fetch_optional(db_pool.as_ref())
+        .await {
+        Ok(l) => l,
+        Err(e) => {
+            println!("Error fetching location by id: {}: {}", id.to_string(), e);
+            None
+        }
+    }
 }
