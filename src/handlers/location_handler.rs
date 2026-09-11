@@ -118,20 +118,7 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, body
         Err(res) => return res,
     };
     //user dürfen nur eigene locations bearbeiten:
-    if jwt.role == Role::USER {
-        //user darg nur EIGENE location bearbeiten:
-        match get_location_by_id(jwt.user, db_pool.clone()).await {
-            Some(location) => {
-                match location.user_id {
-                    Some(user_id) => {
-                        if user_id != jwt.user { return HttpResponse::Forbidden().finish(); }
-                    }
-                    None => { return HttpResponse::Forbidden().finish(); }
-                }
-            }
-            None => {return HttpResponse::Forbidden().finish(); }
-        }
-    }
+    if !is_user_matching(&jwt, &body.id, &db_pool).await { return HttpResponse::Forbidden().finish(); }
 
     println!("{}", body.id.to_string());
     let mut query_builder = QueryBuilder::new("update locations set ");
@@ -175,7 +162,14 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, body
     }
 }
 
-pub async fn delete_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>) -> HttpResponse {
+pub async fn delete_by_id(db_pool: web::Data<PgPool>, req: HttpRequest, id: web::Path<Uuid>) -> HttpResponse {
+    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    let jwt: Jwt = match get_jwt(req, roles).await {
+        Ok(jwt) => jwt,
+        Err(res) => return res,
+    };
+    if !is_user_matching(&jwt, &id, &db_pool).await { return HttpResponse::Forbidden().finish(); }
+
     let res = sqlx::query(
         "delete from locations where id = $1",
     )
@@ -206,4 +200,22 @@ async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<Loca
             None
         }
     }
+}
+
+async fn is_user_matching(jwt: &Jwt, location_id: &Uuid, db_pool: &web::Data<PgPool>) -> bool {
+    if jwt.role == Role::USER {
+        //user darg nur EIGENE location bearbeiten:
+        match get_location_by_id(jwt.user, db_pool.clone()).await {
+            Some(location) => {
+                match location.user_id {
+                    Some(user_id) => {
+                        if user_id != jwt.user { return false; }
+                        else { return true; }
+                    }
+                    None => { return false; }
+                }
+            }
+            None => {return false; }
+        }
+    } else { return true; }
 }

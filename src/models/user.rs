@@ -22,6 +22,8 @@ pub struct User {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateUser {
     pub name: String,
-    pub role: Role,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role: Option<Role>,
     pub password: String,
 }
