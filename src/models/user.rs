@@ -25,5 +25,26 @@ pub struct CreateUser {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub role: Option<Role>,
+
     pub password: String,
+}
+
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, FromRow)]
+pub struct RefreshJwt {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub token_hash: String,
+    pub exp: i64,
+    pub iat: i64,
+    pub typ: String,
+    pub family: Uuid,
+}
+
+#[derive(sqlx::Type, Debug, Serialize, Deserialize, FromRow)]
+pub struct CreateRefreshJwt {
+    pub user_id: Uuid,
+    pub exp: i64,
+    pub iat: i64,
+    pub typ: String,
+    pub family: Uuid,
 }

@@ -8,6 +8,7 @@ use sqlx::postgres::PgPool;
 use actix_web::web;
 use uuid::Uuid;
 use crate::models::user::*;
+use std::hash::{Hash, DefaultHasher, Hasher};
 
 pub fn hash_pw(pw: String) -> String {
     let salt_str = env::var("INIT_PW_SALT").unwrap();
@@ -18,6 +19,12 @@ pub fn hash_pw(pw: String) -> String {
         .unwrap()
         .to_string()
 
+}
+
+pub fn calc_hash(s: String) -> String {
+    let mut hasher = DefaultHasher::new();
+    s.hash(&mut hasher);
+    format!("{:x}", hasher.finish())
 }
 
 pub async fn verify_pw(pw: String, name: String, db_pool: web::Data<PgPool>) -> Result<User, String> {

@@ -7,6 +7,16 @@ CREATE TABLE IF NOT EXISTS users (
     password TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    token_hash TEXT NOT NULL UNIQUE,
+    exp BIGINT NOT NULL,
+    iat BIGINT NOT NULL,
+    typ VARCHAR(20) NOT NULL CHECK (typ IN ('access', 'refresh')),
+    family UUID NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS locations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,

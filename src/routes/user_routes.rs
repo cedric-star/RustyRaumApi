@@ -7,6 +7,7 @@ pub fn init_user_routes(cfg: &mut web::ServiceConfig) {
             .route("/login", web::post().to(login))
             .route("/register", web::post().to(register))
             .route("/refresh", web::get().to(refresh))
+            .route("/logout", web::get().to(logout))
             .route("", web::get().to(get_all_users))
             .route("/{id}", web::get().to(get_user_by_id))
     );
