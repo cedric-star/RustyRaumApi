@@ -11,6 +11,7 @@ use std::time::{Duration};
 
 use routes::user_routes::init_user_routes;
 use routes::location_routes::init_location_routes;
+use routes::gis_routes::init_gis_routes;
 use models::user::User;
 use util::hashing::hash_pw;
 
@@ -40,6 +41,7 @@ async fn main() -> std::io::Result<()> {
                 web::scope("/api")
                 .configure(init_user_routes)
                 .configure(init_location_routes)
+                .configure(init_gis_routes)
             )
     })
     .bind(format!("{}:{}", host, port))?

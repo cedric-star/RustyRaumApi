@@ -110,3 +110,7 @@ pub async fn register(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::J
 
     HttpResponse::Ok().finish()
 }
+
+pub async fn refresh() -> HttpResponse {
+    HttpResponse::Ok().finish()
+}
