@@ -1425,6 +1425,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "jsonwebtoken",
+ "log",
  "password-hash",
  "rand_core 0.6.4",
  "serde",

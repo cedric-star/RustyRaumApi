@@ -8,7 +8,6 @@ use dotenv::dotenv;
 use std::env;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::{Duration};
-use simple_logger::*;
 use routes::user_routes::init_user_routes;
 use routes::location_routes::init_location_routes;
 use routes::gis_routes::init_gis_routes;
@@ -16,6 +15,8 @@ use util::hashing::hash_pw;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    simple_logger::SimpleLogger::new().with_level(log::LevelFilter::Info).init().unwrap();
+    log::info!("initialised logger");
     dotenv().ok();
     let host = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
@@ -25,8 +26,8 @@ async fn main() -> std::io::Result<()> {
         env::var("DB").unwrap()
     );
 
-    println!("Server running at http://{}:{}", host, port);
-    println!("Connection to Database at: {}", db_url);
+    log::info!("Server running at http://{}:{}", host, port);
+    log::info!("Connection to Database at: {}", db_url);
     let db_pool = establish_db_connection(db_url.as_str())
         .await
         .expect("Failed to connect 2 database!");
