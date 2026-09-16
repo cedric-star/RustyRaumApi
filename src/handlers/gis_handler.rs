@@ -86,7 +86,10 @@ pub async fn gis_fun(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Js
 
     let mut separated = query_builder.separated(", ");
     for id in &body.inputs {
-        separated.push("(select geo_data::geometry from locations where id = ");
+        separated.push("(select geo_data::");
+        if function.returns_obj { separated.push_unseparated("geometry"); }
+        else { separated.push_unseparated("geography"); }
+        separated.push_unseparated(" from locations where id = ");
         separated.push_bind_unseparated(id);
         separated.push_unseparated(")");
     }
@@ -94,21 +97,39 @@ pub async fn gis_fun(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Js
     if function.returns_obj {
         query_builder.push(")) as result");
     } else {
-        query_builder.push(") as result");
+        query_builder.push(")::float8::text as result");
     }
 
     println!("sql: {:?}", query_builder.sql());
 
-    match query_builder.build().fetch_one(db_pool.as_ref()).await {
+    let res: String = match query_builder.build().fetch_one(db_pool.as_ref()).await {
         Ok(row) => {
-            println!("{:?}", row);
+            println!("row: {:?}", row);
+            match row.try_get::<String, _>("result") {
+                Ok(res) => {
+                    println!("res: {res}");
+                    res
+                },
+                Err(e) => {
+                    println!("error: {e}");
+                    return HttpResponse::InternalServerError().finish();
+                },
+            }
         },
         Err(e) => {
             println!("{e}");
+            return HttpResponse::InternalServerError().finish();
+        },
+    };
+    let json_res: Value = match serde_json::from_str(res.as_str()) {
+        Ok(res) => res,
+        Err(e) => {
+            println!("error: {e}");
+            return HttpResponse::InternalServerError().finish();
         },
     };
 
-    HttpResponse::Ok().finish()
+    HttpResponse::Ok().json(json_res)
 }
 
 fn read_metadata_file() -> String {
