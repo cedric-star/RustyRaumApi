@@ -1,11 +1,10 @@
-use actix_web::{web, http::header, HttpResponse, HttpRequest};
+use actix_web::{web, HttpResponse, HttpRequest};
 use uuid::Uuid;
 use sqlx::postgres::PgPool;
 use sqlx::QueryBuilder;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use crate::models::location::{Location};
-use crate::util::hashing::verify_pw;
 use crate::util::jwt_service::*;
 use crate::util::auth::get_jwt;
 use crate::models::user::Role;
@@ -36,8 +35,8 @@ pub struct PatchRequest {
 
 pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpResponse {
     let roles: Vec<Role> = vec![Role::ADMIN];
-    let jwt: Jwt = match get_jwt(req, roles).await {
-        Ok(jwt) => jwt,
+    match get_jwt(req, roles).await {
+        Ok(_) => (),
         Err(res) => return res,
     };
     println!("token korekt");
@@ -63,7 +62,7 @@ pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>
     };
     let id = id.into_inner();
     println!("vergleich uuids:\n{}\n{}\n", id.to_string(), jwt.user.to_string());
-    if id != jwt.user {
+    if id != jwt.user && jwt.role != Role::ADMIN {
         return HttpResponse::Forbidden().json(serde_json::json!({"success": false, "msg": "token dosnt match user"}));
     }
     let locations = sqlx::query_as::<_, Location>("select id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations where user_id = $1")
@@ -203,19 +202,18 @@ pub async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<
 }
 
 async fn is_user_matching(jwt: &Jwt, location_id: &Uuid, db_pool: &web::Data<PgPool>) -> bool {
-    if jwt.role == Role::USER {
-        //user darg nur EIGENE location bearbeiten:
-        match get_location_by_id(jwt.user, db_pool.clone()).await {
-            Some(location) => {
-                match location.user_id {
-                    Some(user_id) => {
-                        if user_id != jwt.user { return false; }
-                        else { return true; }
-                    }
-                    None => { return false; }
+    if jwt.role == Role::ADMIN { return true;}
+    //user darf nur EIGENE location bearbeiten:
+    match get_location_by_id(*location_id, db_pool.clone()).await {
+        Some(location) => {
+            match location.user_id {
+                Some(user_id) => {
+                    if user_id != jwt.user { return false; }
+                    else { return true; }
                 }
+                None => { return false; }
             }
-            None => {return false; }
         }
-    } else { return true; }
+        None => {return false; }
+    }
 }

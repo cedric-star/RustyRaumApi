@@ -1,18 +1,16 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
+    password_hash::{PasswordHasher, SaltString},
     Argon2,
 };
-use dotenv::dotenv;
 use std::env;
 use sqlx::postgres::PgPool;
 use actix_web::web;
-use uuid::Uuid;
 use crate::models::user::*;
 use std::hash::{Hash, DefaultHasher, Hasher};
 
 pub fn hash_pw(pw: String) -> String {
     let salt_str = env::var("INIT_PW_SALT").unwrap();
-    let salt: SaltString = SaltString::new(salt_str.as_str()).unwrap();
+    let salt: SaltString = SaltString::from_b64(salt_str.as_str()).unwrap();
     let hasher = Argon2::default();
     hasher
         .hash_password(pw.as_bytes(), &salt)

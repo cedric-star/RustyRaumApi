@@ -1,7 +1,6 @@
 use crate::util::jwt_service::{Jwt, TokenService, AuthConfig};
 use actix_web::{HttpRequest, HttpResponse};
 use crate::models::user::Role;
-use crate::util::jwt_service::*;
 
 async fn get_jwt_from_token(token: String) -> Option<Jwt> {
     let auth_conf = AuthConfig::get_conf();

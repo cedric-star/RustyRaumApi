@@ -15,7 +15,7 @@ pub struct LoginRequest {
 
 pub async fn get_user_by_id(db_pool: web::Data<PgPool>, req: HttpRequest, id: web::Path<Uuid>) -> HttpResponse {
     let roles: Vec<Role> = vec![Role::ADMIN];
-    let jwt: Jwt = match get_jwt(req, roles).await {
+    match get_jwt(req, roles).await {
         Ok(jwt) => jwt,
         Err(res) => return res,
     };
@@ -33,7 +33,7 @@ pub async fn get_user_by_id(db_pool: web::Data<PgPool>, req: HttpRequest, id: we
 
 pub async fn get_all_users(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpResponse {
     let roles: Vec<Role> = vec![Role::ADMIN];
-    let jwt: Jwt = match get_jwt(req, roles).await {
+    match get_jwt(req, roles).await {
         Ok(jwt) => jwt,
         Err(res) => return res,
     };
@@ -74,7 +74,7 @@ pub async fn login(db_pool: web::Data<PgPool>, req: web::Json<LoginRequest>) -> 
 
 pub async fn register(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Json<CreateUser>) -> HttpResponse {
     let roles: Vec<Role> = vec![Role::ADMIN];
-    let jwt: Jwt = match get_jwt(req, roles).await {
+    match get_jwt(req, roles).await {
         Ok(jwt) => jwt,
         Err(res) => return res,
     };
@@ -107,8 +107,6 @@ pub async fn register(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::J
             return HttpResponse::InternalServerError().finish();
         }
     }
-
-    HttpResponse::Ok().finish()
 }
 
 pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpResponse {
@@ -129,7 +127,7 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
                         match token_service.validate_refresh_token(auth_str.to_string()) {
                             Ok(_) => (),
                             Err(e) => {
-                                println!("refresh token invalid!");
+                                println!("refresh token invalid!: {e}");
                                 return HttpResponse::Forbidden().finish();
                             },
                         };
@@ -196,7 +194,7 @@ pub async fn logout(db_pool: web::Data<PgPool>, id: web::Path<Uuid>, req: HttpRe
         .execute(db_pool.as_ref())
         .await {
 
-        Ok(res) => {
+        Ok(_) => {
             return HttpResponse::Ok().finish();
         },
         Err(e) => {

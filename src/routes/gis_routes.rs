@@ -1,5 +1,4 @@
-use actix_web::{web, get, HttpResponse, Responder};
-use serde_json::json;
+use actix_web::{web};
 use crate::handlers::gis_handler::*;
 
 pub fn init_gis_routes(cfg: &mut web::ServiceConfig) {

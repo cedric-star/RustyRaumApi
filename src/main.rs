@@ -8,11 +8,10 @@ use dotenv::dotenv;
 use std::env;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use std::time::{Duration};
-
+use simple_logger::*;
 use routes::user_routes::init_user_routes;
 use routes::location_routes::init_location_routes;
 use routes::gis_routes::init_gis_routes;
-use models::user::User;
 use util::hashing::hash_pw;
 
 #[actix_web::main]

@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use sqlx::FromRow;
-use chrono::{Duration, Utc};
 
 #[derive(sqlx::Type, Debug, Serialize, Deserialize, FromRow)]
 pub struct Location {

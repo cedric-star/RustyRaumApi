@@ -6,11 +6,8 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{
     decode, encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation,
 };
-use actix_web::HttpRequest;
-use dotenv::dotenv;
 use std::env;
-use crate::models::user::{RefreshJwt, CreateRefreshJwt};
-use std::fmt::format;
+use crate::models::user::{CreateRefreshJwt};
 use crate::models::user::Role;
 use crate::util::hashing::calc_hash;
 
@@ -108,7 +105,10 @@ impl TokenService {
         println!("saving refresh token for user: {user}");
         let token = match &token_str {
             Ok(str) => calc_hash(str.to_string()),
-            Err(e) => { return token_str; }
+            Err(e) => {
+                println!("error in generating refresh jwt: {e}");
+                return token_str;
+            }
         };
         let res = sqlx::query(
             r#"
