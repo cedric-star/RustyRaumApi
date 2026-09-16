@@ -118,11 +118,21 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
         Err(res) => return res,
     };
 
+    let auth_conf = AuthConfig::get_conf();
+    let token_service = TokenService::new(&auth_conf);
+
     let refresh_token_str = match req.headers().get("Refresh") {
         Some(header_value) => {
             match header_value.to_str() {
                 Ok(auth_str) => {
                     if !auth_str.is_empty() {
+                        match token_service.validate_refresh_token(auth_str.to_string()) {
+                            Ok(_) => (),
+                            Err(e) => {
+                                println!("refresh token invalid!");
+                                return HttpResponse::Forbidden().finish();
+                            },
+                        };
                         calc_hash(auth_str.to_string())
                     } else {
                         return HttpResponse::BadRequest().finish();
@@ -133,17 +143,6 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
         }
         None => return HttpResponse::InternalServerError().finish(),
     };
-
-    let auth_conf = AuthConfig::get_conf();
-    let token_service = TokenService::new(&auth_conf);
-
-    match token_service.validate_refresh_token(refresh_token_str.clone()) {
-        Ok(_) => (),
-        Err(e) => {
-            println!("refresh token invalid!");
-            return HttpResponse::Forbidden().finish();
-        }
-    }
 
     let refresh_token = match sqlx::query_as::<_, RefreshJwt>("select * from refresh_tokens where token_hash = $1")
         .bind(&refresh_token_str)

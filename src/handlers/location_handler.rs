@@ -4,7 +4,7 @@ use sqlx::postgres::PgPool;
 use sqlx::QueryBuilder;
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
-use crate::models::location::{Location, CreateLocation};
+use crate::models::location::{Location};
 use crate::util::hashing::verify_pw;
 use crate::util::jwt_service::*;
 use crate::util::auth::get_jwt;
@@ -66,7 +66,7 @@ pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>
     if id != jwt.user {
         return HttpResponse::Forbidden().json(serde_json::json!({"success": false, "msg": "token dosnt match user"}));
     }
-    let locations = sqlx::query_as::<_, Location>("select id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations where user_id = $1")
+    let locations = sqlx::query_as::<_, Location>("select id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations where user_id = $1")
         .bind(id)
         .fetch_all(db_pool.as_ref())
         .await;

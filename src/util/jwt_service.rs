@@ -35,10 +35,6 @@ impl Jwt {
             role: role,
         }
     }
-
-    pub fn is_expired(&self) -> bool {
-        Utc::now().timestamp() > self.exp
-    }
 }
 
 impl CreateRefreshJwt {

@@ -17,10 +17,3 @@ pub struct Location {
 
     pub geo_data: String, //geo json string
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CreateLocation {
-    pub title: String,
-    pub description: String,
-    pub geo_data: String,
-}

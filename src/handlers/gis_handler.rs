@@ -4,7 +4,7 @@ use sqlx::postgres::PgPool;
 use sqlx::{QueryBuilder, Row, Postgres};
 use serde::{Serialize, Deserialize};
 use serde_json::Value;
-use crate::models::location::{Location, CreateLocation};
+use crate::models::location::{Location};
 use crate::util::hashing::verify_pw;
 use crate::util::jwt_service::*;
 use crate::util::auth::get_jwt;
@@ -43,7 +43,7 @@ pub async fn gis_fun(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Js
 
     //input checking
     let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
-    let jwt: Jwt = match get_jwt(req, roles).await {
+    match get_jwt(req, roles).await {
         Ok(jwt) => jwt,
         Err(res) => return res,
     };
@@ -137,7 +137,7 @@ fn read_metadata_file() -> String {
     match fs::read_to_string(path) {
         Ok(m) => m,
         Err(e) => {
-            println!("error reading file from {path}");
+            println!("error reading file from {path}, error: {e}");
             return String::from("");
         }
     }
