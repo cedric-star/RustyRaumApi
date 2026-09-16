@@ -189,7 +189,7 @@ pub async fn delete_by_id(db_pool: web::Data<PgPool>, req: HttpRequest, id: web:
     };
 }
 
-async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<Location> {
+pub async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<Location> {
     match sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations where id = $1")
         .bind(id)
         .fetch_optional(db_pool.as_ref())
