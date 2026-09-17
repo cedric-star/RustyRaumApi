@@ -102,11 +102,11 @@ impl TokenService {
         let token_str = encode(&Header::new(Algorithm::HS256), &jwt, &self.encoding_key)
             .map_err(|_| "Encoding of regresh Token failed!".to_string());
 
-        println!("saving refresh token for user: {user}");
+        log::info!("saving refresh token for user: {user}");
         let token = match &token_str {
             Ok(str) => calc_hash(str.to_string()),
             Err(e) => {
-                println!("error in generating refresh jwt: {e}");
+                log::error!("error in generating refresh jwt: {e}");
                 return token_str;
             }
         };
@@ -127,7 +127,7 @@ impl TokenService {
 
         match res {
             Ok(rows) => {
-                println!("refresh token saving rows affected: {}", rows.rows_affected());
+                log::info!("refresh token saving rows affected: {}", rows.rows_affected());
                 if rows.rows_affected() != 1 {return Err(format!("{} rows afefcted while saving refresh token",  rows.rows_affected())); }
             }
             Err(e) => {

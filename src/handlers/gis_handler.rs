@@ -48,8 +48,8 @@ pub async fn gis_fun(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Js
     if metadata.is_empty() { return HttpResponse::InternalServerError().finish(); }
     let metadata: Metadata = match serde_json::from_str(metadata.as_str()) {
         Ok(m) => m,
-        Err(_) => {
-            println!("unable 2 serialize json metadata");
+        Err(e) => {
+            log::error!("unable 2 serialize json metadata: {e}");
             return HttpResponse::BadRequest().finish();
         },
     };
@@ -57,14 +57,14 @@ pub async fn gis_fun(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Js
     let function: &Function = match metadata.functions.iter().find(|f| f.name == body.name) {
         Some(f) => f,
         None => {
-            println!("{} not in supported functions", body.name);
+            log::error!("{} not in supported functions", body.name);
             return HttpResponse::BadRequest().finish();
 
         },
     };
 
     if body.inputs.len() != function.inputs {
-        println!("input number: {} doesnt match with metadata input number: {}", body.inputs.len(), function.inputs);
+        log::warn!("input number: {} doesnt match with metadata input number: {}", body.inputs.len(), function.inputs);
         return HttpResponse::BadRequest().finish();
     }
     //input checking over
@@ -97,31 +97,30 @@ pub async fn gis_fun(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::Js
         query_builder.push(")::float8::text as result");
     }
 
-    println!("sql: {:?}", query_builder.sql());
+    log::debug!("executing gis fun: sql: {:?}", query_builder.sql());
 
     let res: String = match query_builder.build().fetch_one(db_pool.as_ref()).await {
         Ok(row) => {
-            println!("row: {:?}", row);
             match row.try_get::<String, _>("result") {
                 Ok(res) => {
-                    println!("res: {res}");
+                    log::debug!("gis function res: {res}");
                     res
                 },
                 Err(e) => {
-                    println!("error: {e}");
+                    log::error!("error: {e}");
                     return HttpResponse::InternalServerError().finish();
                 },
             }
         },
         Err(e) => {
-            println!("{e}");
+            log::error!("query for gis funtction failed: {e}");
             return HttpResponse::InternalServerError().finish();
         },
     };
     let json_res: Value = match serde_json::from_str(res.as_str()) {
         Ok(res) => res,
         Err(e) => {
-            println!("error: {e}");
+            log::error!("json parsing in gis function error: {e}");
             return HttpResponse::InternalServerError().finish();
         },
     };
@@ -134,7 +133,7 @@ fn read_metadata_file() -> String {
     match fs::read_to_string(path) {
         Ok(m) => m,
         Err(e) => {
-            println!("error reading file from {path}, error: {e}");
+            log::error!("error reading file from {path}, error: {e}");
             return String::from("");
         }
     }

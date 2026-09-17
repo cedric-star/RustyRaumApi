@@ -50,17 +50,15 @@ pub async fn get_all_users(db_pool: web::Data<PgPool>, req: HttpRequest) -> Http
 }
 
 pub async fn login(db_pool: web::Data<PgPool>, req: web::Json<LoginRequest>) -> HttpResponse {
-    println!("Logging in as: {}", req.name);
+    log::debug!("Logging in as: {}", req.name);
 
     let db_user = match verify_pw(req.password.clone(), req.name.clone(), db_pool.clone()).await {
         Ok(user) => user,
         Err(e) => {
-            println!("{e}");
+            log::info!("{e}");
             return HttpResponse::Forbidden().json(e);
         }
     };
-
-    println!("password correct!");
 
     let auth_conf = AuthConfig::get_conf();
     let token_service = TokenService::new(&auth_conf);
@@ -97,13 +95,13 @@ pub async fn register(db_pool: web::Data<PgPool>, req: HttpRequest, body: web::J
 
     match res {
         Ok(rows) => {
-            println!("registered new user: {}, rows: {}", body.name, rows.rows_affected());
+            log::info!("registered new user: {}, rows: {}", body.name, rows.rows_affected());
             if rows.rows_affected() == 0 {return HttpResponse::BadRequest()
                 .json(serde_json::json!({"success": false, "msg": "user with name exists"})); }
             return HttpResponse::Ok().finish();
         }
         Err(e) => {
-            println!("Error while registering user: {e}");
+            log::error!("Error while registering user: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     }
@@ -127,7 +125,7 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
                         match token_service.validate_refresh_token(auth_str.to_string()) {
                             Ok(_) => (),
                             Err(e) => {
-                                println!("refresh token invalid!: {e}");
+                                log::error!("refresh token invalid!: {e}");
                                 return HttpResponse::Forbidden().finish();
                             },
                         };
@@ -149,11 +147,11 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
 
         Ok(Some(token)) => token,
         Ok(None) => {
-            println!("got no tokens ):");
+            log::info!("got no refresh token ):");
             return HttpResponse::Forbidden().finish();
         }
         Err(e) => {
-            println!("got error instead of tokens: {e}");
+            log::error!("got error instead of tokens: {e}");
             return HttpResponse::InternalServerError().finish();
         },
     };
@@ -167,7 +165,7 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
     let new_token = match token_service.generate_jwt(jwt.user, jwt.role) {
         Ok(token) => token,
         Err(e) => {
-            println!("error generating token: {e}");
+            log::error!("error generating token: {e}");
             return HttpResponse::InternalServerError().finish();
         },
     };
@@ -198,7 +196,7 @@ pub async fn logout(db_pool: web::Data<PgPool>, id: web::Path<Uuid>, req: HttpRe
             return HttpResponse::Ok().finish();
         },
         Err(e) => {
-            println!("error deleting refresh tokens: {e}");
+            log::error!("error deleting refresh tokens: {e}");
             return HttpResponse::InternalServerError().finish();
         },
     };

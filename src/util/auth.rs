@@ -9,7 +9,7 @@ async fn get_jwt_from_token(token: String) -> Option<Jwt> {
     let jwt: Jwt = match token_service.validate_access_token(token) {
         Ok(jwt) => jwt,
         Err(e) => {
-            println!("access token error: {e}");
+            log::error!("access token error: {e}");
             return None;
         },
     };
@@ -34,7 +34,6 @@ async fn get_token_from_header(req: HttpRequest) -> Option<String> {
         None => return None,
     };
 
-    println!("token: {}", token.to_string());
     return Some(token.to_string());
 }
 

@@ -76,8 +76,8 @@ async fn insert_init_user(pg_pool: &PgPool) {
         .await;
 
     match res {
-        Ok(rows) => println!("Inserted init admin with: {} rows", rows.rows_affected()),
-        Err(e) => println!("Failed inserting init admin: {e}"),
+        Ok(rows) => log::info!("Inserted init admin with: {} rows", rows.rows_affected()),
+        Err(e) => log::warn!("Failed inserting init admin: {e}"),
     }
 
 }

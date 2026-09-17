@@ -39,7 +39,7 @@ pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> 
         Ok(_) => (),
         Err(res) => return res,
     };
-    println!("token korekt");
+    log::debug!("token korekt");
 
     let locations = sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations")
         .fetch_all(db_pool.as_ref())
@@ -48,7 +48,7 @@ pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> 
     match locations {
         Ok(locations) => HttpResponse::Ok().json(locations),
         Err(e) => {
-            println!("db error: {e}");
+            log::error!("get all locations: db error: {e}");
             HttpResponse::InternalServerError().finish()
         }
     }
@@ -61,7 +61,7 @@ pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>
         Err(res) => return res,
     };
     let id = id.into_inner();
-    println!("vergleich uuids:\n{}\n{}\n", id.to_string(), jwt.user.to_string());
+    log::debug!("vergleich uuids:\n{}\n{}\n", id.to_string(), jwt.user.to_string());
     if id != jwt.user && jwt.role != Role::ADMIN {
         return HttpResponse::Forbidden().json(serde_json::json!({"success": false, "msg": "token dosnt match user"}));
     }
@@ -73,7 +73,7 @@ pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>
     match locations {
         Ok(locations) => HttpResponse::Ok().json(locations),
         Err(e) => {
-            println!("Error get locations by user: {e}");
+            log::error!("Error get locations by user: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     }
@@ -100,9 +100,9 @@ pub async fn insert_new_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, 
         .await;
 
     match res {
-        Ok(rows) => println!("Inserted new location: {}, accected rows: {}", body.title, rows.rows_affected()),
+        Ok(rows) => log::debug!("Inserted new location: {}, accected rows: {}", body.title, rows.rows_affected()),
         Err(e) => {
-            println!("Error inserting location: {e}");
+            log::error!("Error inserting location: {e}");
             return HttpResponse::InternalServerError().finish();
         }
     };
@@ -119,7 +119,6 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, body
     //user dürfen nur eigene locations bearbeiten:
     if !is_user_matching(&jwt, &body.id, &db_pool).await { return HttpResponse::Forbidden().finish(); }
 
-    println!("{}", body.id.to_string());
     let mut query_builder = QueryBuilder::new("update locations set ");
     let mut first = true;
 
@@ -145,17 +144,17 @@ pub async fn update_from_json(db_pool: web::Data<PgPool>, req: HttpRequest, body
     }
 
     query_builder.push(" WHERE id = ").push_bind(body.id);
-    println!("{:?}", query_builder.sql());
+    log::debug!("updating location query: {:?}", query_builder.sql());
     let query = query_builder.build();
 
     match query.execute(db_pool.as_ref()).await {
         Ok(res) => {
-            println!("updated: {} rows", res.rows_affected());
+            log::debug!("updated: {} rows", res.rows_affected());
             if res.rows_affected() == 0 { return HttpResponse::BadRequest().json(serde_json::json!({"success": false}))}
             return HttpResponse::Ok().json(serde_json::json!({"success": true}))
         },
         Err(e) => {
-            println!("update failed: {e}");
+            log::error!("locaton update failed: {e}");
             return HttpResponse::InternalServerError().json(serde_json::json!({"error": e.to_string()}))
         }
     }
@@ -177,11 +176,11 @@ pub async fn delete_by_id(db_pool: web::Data<PgPool>, req: HttpRequest, id: web:
         .await;
     match res {
         Ok(res) => {
-            println!("deleted rows: {}", res.rows_affected());
+            log::info!("deleted rows: {}", res.rows_affected());
             return HttpResponse::Ok().finish();
         },
         Err(e) => {
-            println!("error while deleting: {e}");
+            log::error!("error while deleting location: {e}");
             return HttpResponse::InternalServerError().finish();
         },
 
@@ -195,7 +194,7 @@ pub async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<
         .await {
         Ok(l) => l,
         Err(e) => {
-            println!("Error fetching location by id: {}: {}", id.to_string(), e);
+            log::error!("Error fetching location by id: {}: {}", id.to_string(), e);
             None
         }
     }
