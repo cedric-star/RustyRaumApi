@@ -19,3 +19,4 @@ chrono = { version = "0.4", features = ["serde"] }
 jsonwebtoken = "9"
 simple_logger = "5.2.0"
 log = "0.4.34"
+actix-cors = "0.7.2"

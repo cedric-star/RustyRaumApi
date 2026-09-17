@@ -8,10 +8,23 @@ use crate::util::auth::get_jwt;
 use crate::models::user::Role;
 use std::fs;
 
-pub async fn  get_metadata() -> HttpResponse {
+pub async fn  get_metadata(req: HttpRequest) -> HttpResponse {
+    let roles: Vec<Role> = vec![Role::ADMIN, Role::USER];
+    match get_jwt(req, roles).await {
+        Ok(jwt) => jwt,
+        Err(res) => return res,
+    };
+
     let metadata = read_metadata_file();
     if metadata.is_empty() { return HttpResponse::InternalServerError().finish(); }
-    HttpResponse::Ok().json(metadata)
+    match serde_json::from_str::<Value>(&metadata) {
+        Ok(json) => { return HttpResponse::Ok().content_type("application/json").json(json); },
+        Err(e) => {
+            log::error!("invalid json metadata: {e}");
+            return HttpResponse::InternalServerError().finish();
+        },
+    };
+
 }
 
 #[derive(Debug, Serialize, Deserialize)]

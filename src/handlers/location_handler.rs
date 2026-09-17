@@ -41,17 +41,19 @@ pub async fn get_all_locations(db_pool: web::Data<PgPool>, req: HttpRequest) -> 
     };
     log::debug!("token korekt");
 
-    let locations = sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations")
+    let locations = sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::jsonb as geo_data FROM locations")
         .fetch_all(db_pool.as_ref())
         .await;
 
     match locations {
-        Ok(locations) => HttpResponse::Ok().json(locations),
+        Ok(locations) => {
+            return HttpResponse::Ok().json(locations);
+        },
         Err(e) => {
             log::error!("get all locations: db error: {e}");
-            HttpResponse::InternalServerError().finish()
+            return HttpResponse::InternalServerError().finish();
         }
-    }
+    };
 }
 
 pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>, req: HttpRequest) -> HttpResponse {
@@ -65,7 +67,7 @@ pub async fn get_locations_by_id(db_pool: web::Data<PgPool>, id: web::Path<Uuid>
     if id != jwt.user && jwt.role != Role::ADMIN {
         return HttpResponse::Forbidden().json(serde_json::json!({"success": false, "msg": "token dosnt match user"}));
     }
-    let locations = sqlx::query_as::<_, Location>("select id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data from locations where user_id = $1")
+    let locations = sqlx::query_as::<_, Location>("select id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::jsonb as geo_data from locations where user_id = $1")
         .bind(id)
         .fetch_all(db_pool.as_ref())
         .await;
@@ -188,7 +190,7 @@ pub async fn delete_by_id(db_pool: web::Data<PgPool>, req: HttpRequest, id: web:
 }
 
 pub async fn get_location_by_id(id: Uuid, db_pool: web::Data<PgPool>) -> Option<Location> {
-    match sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::TEXT as geo_data FROM locations where id = $1")
+    match sqlx::query_as::<_, Location>("SELECT id, user_id, title, description, ST_AsGeoJson(geo_data, 3857)::jsonb as geo_data FROM locations where id = $1")
         .bind(id)
         .fetch_optional(db_pool.as_ref())
         .await {

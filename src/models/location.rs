@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::{Value};
 use uuid::Uuid;
 use sqlx::FromRow;
 
@@ -14,5 +15,5 @@ pub struct Location {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    pub geo_data: String, //geo json string
+    pub geo_data: Value, //geo json string
 }

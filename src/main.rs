@@ -3,7 +3,8 @@ mod models;
 mod routes;
 mod util;
 
-use actix_web::{App, HttpServer, web};
+use actix_web::{App, HttpServer, web, http::header};
+use actix_cors::Cors;
 use dotenv::dotenv;
 use std::env;
 use sqlx::postgres::{PgPool, PgPoolOptions};
@@ -35,7 +36,18 @@ async fn main() -> std::io::Result<()> {
     let db_pool_data = web::Data::new(db_pool);
 
     HttpServer::new(move || {
-        App::new()
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5173")
+            .allowed_origin("http://localhost:8080")
+            .allowed_origin("https://raum-martin.micedric.dpdns.org")
+            .allowed_origin("https://raum-api.micedric.dpdret.org")
+            .allowed_origin("https://raum-vue.micedric.dpdns.org")
+            .allowed_origin("https://*.raum-api.micedric.dpdns.org")
+            .allowed_origin("https://*.raum-api.micedric.dpdns.org/*")
+            .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![header::AUTHORIZATION, header::CONTENT_TYPE]);
+
+        App::new().wrap(cors)
             .app_data(db_pool_data.clone())
             .service(
                 web::scope("/api")
