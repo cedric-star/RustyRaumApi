@@ -62,7 +62,7 @@ pub async fn login(db_pool: web::Data<PgPool>, req: web::Json<LoginRequest>) -> 
 
     let auth_conf = AuthConfig::get_conf();
     let token_service = TokenService::new(&auth_conf);
-    let token_pair = match token_service.generate_token_pair(db_user.id, db_user.role, db_pool.clone()).await {
+    let token_pair = match token_service.generate_token_pair(db_user.id, db_user.name, db_user.role, db_pool.clone()).await {
         Ok(pair) => pair,
         Err(e) => return HttpResponse::Forbidden().json(e),
     };
@@ -162,7 +162,7 @@ pub async fn refresh(db_pool: web::Data<PgPool>, req: HttpRequest) -> HttpRespon
 
     let auth_conf = AuthConfig::get_conf();
     let token_service = TokenService::new(&auth_conf);
-    let new_token = match token_service.generate_jwt(jwt.user, jwt.role) {
+    let new_token = match token_service.generate_jwt(jwt.user, jwt.name, jwt.role) {
         Ok(token) => token,
         Err(e) => {
             log::error!("error generating token: {e}");

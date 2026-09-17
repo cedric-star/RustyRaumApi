@@ -14,6 +14,7 @@ use crate::util::hashing::calc_hash;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Jwt {
     pub user: Uuid,
+    pub name: String,
     pub exp: i64,
     pub iat: i64,
     pub typ: String,
@@ -21,11 +22,12 @@ pub struct Jwt {
 }
 
 impl Jwt {
-    pub fn new(user: Uuid, role: Role, expires_in: Duration) -> Self {
+    pub fn new(user: Uuid, name: String, role: Role, expires_in: Duration) -> Self {
         let now = Utc::now();
 
         Self {
             user: user,
+            name: name,
             exp: (now + expires_in).timestamp(),
             iat: now.timestamp(),
             typ: "access".to_string(),
@@ -89,8 +91,8 @@ impl TokenService {
         }
     }
 
-    pub fn generate_jwt(&self, user: Uuid, role: Role) -> Result<String, String> {
-        let jwt = Jwt::new(user, role, self.access_token_ttl);
+    pub fn generate_jwt(&self, user: Uuid, name: String, role: Role) -> Result<String, String> {
+        let jwt = Jwt::new(user, name, role, self.access_token_ttl);
 
         encode(&Header::new(Algorithm::HS256), &jwt, &self.encoding_key)
             .map_err(|_| "Encoding of Token failed!".to_string())
@@ -138,9 +140,9 @@ impl TokenService {
         return token_str;
 }
 
-    pub async fn generate_token_pair(&self, user: Uuid, role: Role, db_pool: web::Data<PgPool>) -> Result<TokenPair, String> {
+    pub async fn generate_token_pair(&self, user: Uuid, name: String, role: Role, db_pool: web::Data<PgPool>) -> Result<TokenPair, String> {
         Ok(TokenPair {
-            access_token: self.generate_jwt(user, role)?,
+            access_token: self.generate_jwt(user, name, role)?,
             refresh_token: self.generate_refresh_jwt(db_pool.clone(), user).await?,
             token_typ: "Bearer".to_string(),
             expires_in: self.access_token_ttl.num_seconds() as u64,
