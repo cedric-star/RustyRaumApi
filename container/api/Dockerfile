@@ -3,7 +3,7 @@ FROM rust:1.98
 WORKDIR /app
 
 # Copy Cargo files zuerst (für besseres Caching)
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml metadata.json Cargo.lock ./
 
 COPY src ./src
 
