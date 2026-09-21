@@ -2,3 +2,5 @@
 /postgres_data
 postgres_data
 .env
+test.env
+prod.env

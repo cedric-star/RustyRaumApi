@@ -4,6 +4,7 @@ PORT=
 DB=
 DB_USER=
 DB_PW=
+DBHOST="localhost" | "raum-db"
 
 INIT_ADMIN_PW=
 INIT_ADMIN_NAME=

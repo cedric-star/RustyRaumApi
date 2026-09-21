@@ -1,6 +1,6 @@
 services:
   raum-db:
-    build: ./container/.
+    build: ./container/db/.
     container_name: raum-db
     restart: unless-stopped
     environment:
@@ -9,6 +9,46 @@ services:
       POSTGRES_PASSWORD: ${DB_PW}
       TZ: Europe/Berlin
     volumes:
-      - ./container/postgres_data:/var/lib/postgresql/data
+      - ./container/db/postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    labels:
+      - "sablier.enable=true"
+      - "sablier.group=raum"
+  raum-api:
+    build:
+      context: .
+      dockerfile: ./container/api/Dockerfile
+    ports:
+      - "8080:8080"
+    container_name: raum-api
+    depends_on:
+      - raum-db
+    restart: unless-stopped
+    environment:
+      HOST: ${HOST}
+      PORT: ${PORT}
+      DB_HOST: ${DB_HOST}
+      DB: ${DB}
+      DB_USER: ${DB_USER}
+      DB_PW: ${DB_PW}
+      INIT_ADMIN_PW: ${INIT_ADMIN_PW}
+      INIT_ADMIN_NAME: ${INIT_ADMIN_NAME}
+      INIT_PW_SALT: ${INIT_PW_SALT}
+      JWT_SECRET: ${JWT_SECRET}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.raum.rule=Host(`raum-api.micedric.dpdns.org`)"
+      - "traefik.http.routers.raum.entrypoints=websecure"
+      - "traefik.http.routers.raum.tls.certresolver=myresolver"
+      - "traefik.http.routers.raum.middlewares=raum-sablier"
+      - "traefik.http.services.raum.loadbalancer.server.port=80"
+      - "traefik.docker.allownonrunning=true"
+      - "sablier.enable=true"
+      - "sablier.group=raum"
+      - "traefik.http.middlewares.raum-sablier.plugin.sablier.group=raum"
+      - "traefik.http.middlewares.raum-sablier.plugin.sablier.sablierUrl=http://sablier:10000"
+      - "traefik.http.middlewares.raum-sablier.plugin.sablier.sessionDuration=50m"
+      - "traefik.http.middlewares.raum-sablier.plugin.sablier.dynamic.displayName=Raum"
+      - "traefik.http.middlewares.raum-sablier.plugin.sablier.dynamic.theme=ghost"
+      - "traefik.http.middlewares.raum-sablier.plugin.sablier.dynamic.refreshFrequency=3s"

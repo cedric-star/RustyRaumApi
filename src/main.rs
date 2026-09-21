@@ -19,11 +19,14 @@ async fn main() -> std::io::Result<()> {
     simple_logger::SimpleLogger::new().with_level(log::LevelFilter::Info).init().unwrap();
     log::info!("initialised logger");
     dotenv().ok();
+
     let host = env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let db_url = format!("postgres://{}:{}@localhost:5432/{}",
+
+    let db_url = format!("postgres://{}:{}@{}:5432/{}",
         env::var("DB_USER").unwrap(),
         env::var("DB_PW").unwrap(),
+        env::var("DB_HOST").unwrap(),
         env::var("DB").unwrap()
     );
 

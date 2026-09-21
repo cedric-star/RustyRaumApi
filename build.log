@@ -1,0 +1,74 @@
+time="2026-09-18T08:52:35+02:00" level=warning msg="The \"DB\" variable is not set. Defaulting to a blank string."
+time="2026-09-18T08:52:35+02:00" level=warning msg="The \"DB_USER\" variable is not set. Defaulting to a blank string."
+time="2026-09-18T08:52:35+02:00" level=warning msg="The \"DB_PW\" variable is not set. Defaulting to a blank string."
+ Image rapi-raum-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 614B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 237B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/rust:1.75
+#3 DONE 0.8s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [1/5] FROM docker.io/library/rust:1.75@sha256:87f3b2f93b82995443a1a558c234212dafe79cfdc3af956539610560369ddcd0
+#5 CACHED
+
+#6 [internal] load build context
+#6 transferring context: 864B 0.0s done
+#6 DONE 0.0s
+
+#7 [2/5] WORKDIR /app
+#7 DONE 0.2s
+
+#8 [3/5] COPY Cargo.toml Cargo.lock ./
+#8 DONE 0.1s
+
+#9 [4/5] COPY src ./src
+#9 DONE 0.1s
+
+#10 [5/5] RUN cargo build --release
+#10 0.643 error: failed to parse manifest at `/app/Cargo.toml`
+#10 0.643 
+#10 0.643 Caused by:
+#10 0.643   feature `edition2024` is required
+#10 0.643 
+#10 0.643   The package requires the Cargo feature called `edition2024`, but that feature is not stabilized in this version of Cargo (1.75.0 (1d8b05cdd 2023-11-20)).
+#10 0.643   Consider trying a newer version of Cargo (this may require the nightly release).
+#10 0.643   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-2024 for more information about the status of this feature.
+#10 ERROR: process "/bin/sh -c cargo build --release" did not complete successfully: exit code: 101
+------
+ > [5/5] RUN cargo build --release:
+0.643 error: failed to parse manifest at `/app/Cargo.toml`
+0.643 
+0.643 Caused by:
+0.643   feature `edition2024` is required
+0.643 
+0.643   The package requires the Cargo feature called `edition2024`, but that feature is not stabilized in this version of Cargo (1.75.0 (1d8b05cdd 2023-11-20)).
+0.643   Consider trying a newer version of Cargo (this may require the nightly release).
+0.643   See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-2024 for more information about the status of this feature.
+------
+Dockerfile:10
+
+--------------------
+
+   8 |     COPY src ./src
+
+   9 |     
+
+  10 | >>> RUN cargo build --release
+
+  11 |     
+
+  12 |     EXPOSE 8080
+
+--------------------
+
+failed to solve: process "/bin/sh -c cargo build --release" did not complete successfully: exit code: 101
+
