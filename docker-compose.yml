@@ -10,8 +10,6 @@ services:
       TZ: Europe/Berlin
     volumes:
       - ./container/db/postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     labels:
       - "sablier.enable=true"
       - "sablier.group=raum"
@@ -19,8 +17,6 @@ services:
     build:
       context: .
       dockerfile: ./container/api/Dockerfile
-    ports:
-      - "8080:8080"
     container_name: raum-api
     depends_on:
       - raum-db
