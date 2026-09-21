@@ -13,6 +13,8 @@ services:
     labels:
       - "sablier.enable=true"
       - "sablier.group=raum"
+    networks:
+      - mynet
   raum-api:
     build:
       context: .
@@ -32,6 +34,8 @@ services:
       INIT_ADMIN_NAME: ${INIT_ADMIN_NAME}
       INIT_PW_SALT: ${INIT_PW_SALT}
       JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - mynet
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.raum.rule=Host(`raum-api.micedric.dpdns.org`)"
@@ -48,3 +52,6 @@ services:
       - "traefik.http.middlewares.raum-sablier.plugin.sablier.dynamic.displayName=Raum"
       - "traefik.http.middlewares.raum-sablier.plugin.sablier.dynamic.theme=ghost"
       - "traefik.http.middlewares.raum-sablier.plugin.sablier.dynamic.refreshFrequency=3s"
+networks:
+  mynet:
+    external: true
