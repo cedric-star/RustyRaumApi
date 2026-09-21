@@ -42,7 +42,7 @@ services:
       - "traefik.http.routers.raum.entrypoints=websecure"
       - "traefik.http.routers.raum.tls.certresolver=myresolver"
       - "traefik.http.routers.raum.middlewares=raum-sablier"
-      - "traefik.http.services.raum.loadbalancer.server.port=80"
+      - "traefik.http.services.raum.loadbalancer.server.port=8080"
       - "traefik.docker.allownonrunning=true"
       - "sablier.enable=true"
       - "sablier.group=raum"
